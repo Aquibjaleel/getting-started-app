@@ -12,4 +12,4 @@ RUN npm ci --only=production
 COPY --from=builder /app/src ./src
 
 EXPOSE 3000
-CMD ["node", "src/index.js"]i have written
+CMD ["node", "src/index.js"]
