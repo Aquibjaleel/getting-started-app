@@ -1,0 +1,41 @@
+apiVersion: apps/v1         # As we studied, this unlocks the application management folder
+kind: Deployment            # Tells Kubernetes we want a self-healing deployment manager
+metadata:
+  name: todo-app-deployment
+  labels:
+    app: todo-app
+spec:
+  replicas: 3               # Run 3 active copies simultaneously across the cluster for high availability
+  selector:
+    matchLabels:
+      app: todo-app         # Tells the deployment manager exactly which pods it is responsible for
+  template:
+    metadata:
+      labels:
+        app: todo-app       # The label stamped onto our containers
+    spec:
+      containers:
+      - name: todo-api
+        image: getting-started-app:latest # The container image we just built and scanned
+        ports:
+        - containerPort: 3000              # Matches the EXPOSE port from your Dockerfile!
+        resources:                         # DevOps Best Practice: Prevent containers from stealing server memory
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service               # Creates an internal load balancer to send traffic to our 3 pods
+metadata:
+  name: todo-app-service
+spec:
+  type: ClusterIP           # Keeps the app securely inside the cluster network
+  selector:
+    app: todo-app           # Routes traffic only to pods with the label "app: todo-app"
+  ports:
+    - protocol: TCP
+      port: 80              # Users connect on port 80 (standard HTTP)
+      targetPort: 3000      # The service forwards that traffic to port 3000 inside the container
