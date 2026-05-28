@@ -1,0 +1,45 @@
+name: 'Enterprise DevSecOps Deployment Pipeline'
+
+# Trigger the workflow on any push to the main branch
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  security_and_build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Pull down the application code onto the GitHub runner
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Set up the Node.js environment on the runner for testing
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    # 3. Run the real application test suite inside the repository
+    - name: Execute App Unit Tests
+      run: |
+        npm ci
+        npm test --if-present
+
+    # 4. CONTAINERIZATION: Build the local Docker image using your multi-stage Dockerfile
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Local Docker Image
+      run: |
+        docker build -t getting-started-app:${{ github.sha }} .
+
+    # 5. TRIVY SECURITY SCAN: Scan the compiled Stage 2 container layers for OS flaws
+    - name: Run Trivy Container Image Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'getting-started-app:${{ github.sha }}'
+        format: 'table'
+        exit-code: '0' # Keeps the pipeline green for training. Set to '1' in production to break the build on critical bugs.
+        severity: 'CRITICAL,HIGH'
